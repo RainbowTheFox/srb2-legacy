@@ -13,6 +13,7 @@
 #include "m_fixed.h"
 #include "doomtype.h"
 #include "d_player.h"
+#include "p_saveg.h"
 
 #include "blua/lua.h"
 #include "blua/lualib.h"
@@ -47,8 +48,8 @@ void LUA_InvalidateLevel(void);
 void LUA_InvalidateMapthings(void);
 void LUA_InvalidatePlayer(player_t *player);
 void LUA_Step(void);
-void LUA_Archive(void);
-void LUA_UnArchive(void);
+void LUA_Archive(savebuffer_t *save, boolean network);
+void LUA_UnArchive(savebuffer_t *save, boolean network);
 void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c
 void LUA_CVarChanged(const char *name); // lua_consolelib.c
 int Lua_optoption(lua_State *L, int narg, int def, int list_ref);

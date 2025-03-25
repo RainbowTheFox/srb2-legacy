@@ -282,7 +282,7 @@ boolean precache = true; // if true, load all graphics at start
 
 INT16 prevmap, nextmap;
 
-static UINT8 *savebuffer;
+
 
 // Analog Control
 static void UserAnalog_OnChange(void);
@@ -3180,6 +3180,8 @@ void G_LoadGameData(void)
 	UINT8 recmares;
 	INT32 curmare;
 
+	savebuffer_t save;
+
 	// Clear things so previously read gamedata doesn't transfer
 	// to new gamedata
 	G_ClearRecords(); // main and nights records
@@ -3195,27 +3197,27 @@ void G_LoadGameData(void)
 	if (M_CheckParm("-resetdata"))
 		return; // Don't load (essentially, reset).
 
-	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &savebuffer);
+	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &save.buffer);
 	if (!length) // Aw, no game data. Their loss!
 		return;
 
-	save_p = savebuffer;
+	save.p = save.buffer;
 
 	// Version check
-	if (READUINT32(save_p) != 0xFCAFE211)
+	if (READUINT32(save.p) != 0xFCAFE211)
 	{
 		const char *gdfolder = "the SRB2 folder";
 		if (strcmp(srb2home,"."))
 			gdfolder = srb2home;
 
-		Z_Free(savebuffer);
-		save_p = NULL;
+		Z_Free(save.buffer);
+		save.p = NULL;
 		I_Error("Game data is from another version of SRB2.\nDelete %s(maybe in %s) and try again.", gamedatafilename, gdfolder);
 	}
 
-	totalplaytime = READUINT32(save_p);
+	totalplaytime = READUINT32(save.p);
 
-	modded = READUINT8(save_p);
+	modded = READUINT8(save.p);
 
 	// Aha! Someone's been screwing with the save file!
 	if ((modded && !savemoddata))
@@ -3225,49 +3227,49 @@ void G_LoadGameData(void)
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
-		if ((mapvisited[i] = READUINT8(save_p)) > MV_MAX)
+		if ((mapvisited[i] = READUINT8(save.p)) > MV_MAX)
 			goto datacorrupt;
 
 	// To save space, use one bit per collected/achieved/unlocked flag
 	for (i = 0; i < MAXEMBLEMS;)
 	{
-		rtemp = READUINT8(save_p);
+		rtemp = READUINT8(save.p);
 		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
 			emblemlocations[j+i].collected = ((rtemp >> j) & 1);
 		i += j;
 	}
 	for (i = 0; i < MAXEXTRAEMBLEMS;)
 	{
-		rtemp = READUINT8(save_p);
+		rtemp = READUINT8(save.p);
 		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
 			extraemblems[j+i].collected = ((rtemp >> j) & 1);
 		i += j;
 	}
 	for (i = 0; i < MAXUNLOCKABLES;)
 	{
-		rtemp = READUINT8(save_p);
+		rtemp = READUINT8(save.p);
 		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
 			unlockables[j+i].unlocked = ((rtemp >> j) & 1);
 		i += j;
 	}
 	for (i = 0; i < MAXCONDITIONSETS;)
 	{
-		rtemp = READUINT8(save_p);
+		rtemp = READUINT8(save.p);
 		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
 			conditionSets[j+i].achieved = ((rtemp >> j) & 1);
 		i += j;
 	}
 
-	timesBeaten = READUINT32(save_p);
-	timesBeatenWithEmeralds = READUINT32(save_p);
-	timesBeatenUltimate = READUINT32(save_p);
+	timesBeaten = READUINT32(save.p);
+	timesBeatenWithEmeralds = READUINT32(save.p);
+	timesBeatenUltimate = READUINT32(save.p);
 
 	// Main records
 	for (i = 0; i < NUMMAPS; ++i)
 	{
-		recscore = READUINT32(save_p);
-		rectime  = (tic_t)READUINT32(save_p);
-		recrings = READUINT16(save_p);
+		recscore = READUINT32(save.p);
+		rectime  = (tic_t)READUINT32(save.p);
+		recrings = READUINT16(save.p);
 
 		if (recrings > 10000 || recscore > MAXSCORE)
 			goto datacorrupt;
@@ -3284,16 +3286,16 @@ void G_LoadGameData(void)
 	// Nights records
 	for (i = 0; i < NUMMAPS; ++i)
 	{
-		if ((recmares = READUINT8(save_p)) == 0)
+		if ((recmares = READUINT8(save.p)) == 0)
 			continue;
 
 		G_AllocNightsRecordData((INT16)i);
 
 		for (curmare = 0; curmare < (recmares+1); ++curmare)
 		{
-			nightsrecords[i]->score[curmare] = READUINT32(save_p);
-			nightsrecords[i]->grade[curmare] = READUINT8(save_p);
-			nightsrecords[i]->time[curmare] = (tic_t)READUINT32(save_p);
+			nightsrecords[i]->score[curmare] = READUINT32(save.p);
+			nightsrecords[i]->grade[curmare] = READUINT8(save.p);
+			nightsrecords[i]->time[curmare] = (tic_t)READUINT32(save.p);
 
 			if (nightsrecords[i]->grade[curmare] > GRADE_S)
 				goto datacorrupt;
@@ -3303,8 +3305,8 @@ void G_LoadGameData(void)
 	}
 
 	// done
-	Z_Free(savebuffer);
-	save_p = NULL;
+	Z_Free(save.buffer);
+	save.p = NULL;
 
 	// Silent update unlockables in case they're out of sync with conditions
 	M_SilentUpdateUnlockablesAndEmblems();
@@ -3318,8 +3320,8 @@ void G_LoadGameData(void)
 		if (strcmp(srb2home,"."))
 			gdfolder = srb2home;
 
-		Z_Free(savebuffer);
-		save_p = NULL;
+		Z_Free(save.buffer);
+		save.p = NULL;
 
 		I_Error("Corrupt game data file.\nDelete %s(maybe in %s) and try again.", gamedatafilename, gdfolder);
 	}
@@ -3335,11 +3337,13 @@ void G_SaveGameData(void)
 
 	INT32 curmare;
 
+	savebuffer_t save;
+
 	if (!gamedataloaded)
 		return; // If never loaded (-nodata), don't save
 
-	save_p = savebuffer = (UINT8 *)malloc(GAMEDATASIZE);
-	if (!save_p)
+	save.p = save.buffer = (UINT8 *)malloc(GAMEDATASIZE);
+	if (!save.p)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for saving game data\n"));
 		return;
@@ -3347,22 +3351,22 @@ void G_SaveGameData(void)
 
 	if (modifiedgame && !savemoddata)
 	{
-		free(savebuffer);
-		save_p = savebuffer = NULL;
+		free(save.buffer);
+		save.p = save.buffer = NULL;
 		return;
 	}
 
 	// Version test
-	WRITEUINT32(save_p, 0xFCAFE211);
+	WRITEUINT32(save.p, 0xFCAFE211);
 
-	WRITEUINT32(save_p, totalplaytime);
+	WRITEUINT32(save.p, totalplaytime);
 
 	btemp = (UINT8)(savemoddata || modifiedgame);
-	WRITEUINT8(save_p, btemp);
+	WRITEUINT8(save.p, btemp);
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
-		WRITEUINT8(save_p, mapvisited[i]);
+		WRITEUINT8(save.p, mapvisited[i]);
 
 	// To save space, use one bit per collected/achieved/unlocked flag
 	for (i = 0; i < MAXEMBLEMS;)
@@ -3370,7 +3374,7 @@ void G_SaveGameData(void)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXEMBLEMS; ++j)
 			btemp |= (emblemlocations[j+i].collected << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(save.p, btemp);
 		i += j;
 	}
 	for (i = 0; i < MAXEXTRAEMBLEMS;)
@@ -3378,7 +3382,7 @@ void G_SaveGameData(void)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXEXTRAEMBLEMS; ++j)
 			btemp |= (extraemblems[j+i].collected << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(save.p, btemp);
 		i += j;
 	}
 	for (i = 0; i < MAXUNLOCKABLES;)
@@ -3386,7 +3390,7 @@ void G_SaveGameData(void)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXUNLOCKABLES; ++j)
 			btemp |= (unlockables[j+i].unlocked << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(save.p, btemp);
 		i += j;
 	}
 	for (i = 0; i < MAXCONDITIONSETS;)
@@ -3394,28 +3398,28 @@ void G_SaveGameData(void)
 		btemp = 0;
 		for (j = 0; j < 8 && j+i < MAXCONDITIONSETS; ++j)
 			btemp |= (conditionSets[j+i].achieved << j);
-		WRITEUINT8(save_p, btemp);
+		WRITEUINT8(save.p, btemp);
 		i += j;
 	}
 
-	WRITEUINT32(save_p, timesBeaten);
-	WRITEUINT32(save_p, timesBeatenWithEmeralds);
-	WRITEUINT32(save_p, timesBeatenUltimate);
+	WRITEUINT32(save.p, timesBeaten);
+	WRITEUINT32(save.p, timesBeatenWithEmeralds);
+	WRITEUINT32(save.p, timesBeatenUltimate);
 
 	// Main records
 	for (i = 0; i < NUMMAPS; i++)
 	{
 		if (mainrecords[i])
 		{
-			WRITEUINT32(save_p, mainrecords[i]->score);
-			WRITEUINT32(save_p, mainrecords[i]->time);
-			WRITEUINT16(save_p, mainrecords[i]->rings);
+			WRITEUINT32(save.p, mainrecords[i]->score);
+			WRITEUINT32(save.p, mainrecords[i]->time);
+			WRITEUINT16(save.p, mainrecords[i]->rings);
 		}
 		else
 		{
-			WRITEUINT32(save_p, 0);
-			WRITEUINT32(save_p, 0);
-			WRITEUINT16(save_p, 0);
+			WRITEUINT32(save.p, 0);
+			WRITEUINT32(save.p, 0);
+			WRITEUINT16(save.p, 0);
 		}
 	}
 
@@ -3424,25 +3428,25 @@ void G_SaveGameData(void)
 	{
 		if (!nightsrecords[i] || !nightsrecords[i]->nummares)
 		{
-			WRITEUINT8(save_p, 0);
+			WRITEUINT8(save.p, 0);
 			continue;
 		}
 
-		WRITEUINT8(save_p, nightsrecords[i]->nummares);
+		WRITEUINT8(save.p, nightsrecords[i]->nummares);
 
 		for (curmare = 0; curmare < (nightsrecords[i]->nummares + 1); ++curmare)
 		{
-			WRITEUINT32(save_p, nightsrecords[i]->score[curmare]);
-			WRITEUINT8(save_p, nightsrecords[i]->grade[curmare]);
-			WRITEUINT32(save_p, nightsrecords[i]->time[curmare]);
+			WRITEUINT32(save.p, nightsrecords[i]->score[curmare]);
+			WRITEUINT8(save.p, nightsrecords[i]->grade[curmare]);
+			WRITEUINT32(save.p, nightsrecords[i]->time[curmare]);
 		}
 	}
 
-	length = save_p - savebuffer;
+	length = save.p - save.buffer;
 
-	FIL_WriteFile(va(pandf, srb2home, gamedatafilename), savebuffer, length);
-	free(savebuffer);
-	save_p = savebuffer = NULL;
+	FIL_WriteFile(va(pandf, srb2home, gamedatafilename), save.buffer, length);
+	free(save.buffer);
+	save.p = save.buffer = NULL;
 }
 
 #define VERSIONSIZE 16
@@ -3458,22 +3462,22 @@ static void M_ForceLoadGameResponse(INT32 ch)
 	if (ch != 'y' && ch != KEY_ENTER)
 	{
 		//refused
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
+		Z_Free(save.buffer);
+		save.p = save.buffer = NULL;
 		startonmapnum = 0;
 		M_SetupNextMenu(&SP_LoadDef);
 		return;
 	}
 
 	// pick up where we left off.
-	save_p += VERSIONSIZE;
+	save.p += VERSIONSIZE;
 	if (!P_LoadGame(startonmapnum))
 	{
 		M_ClearMenus(true); // so ESC backs out to title
 		M_StartMessage(M_GetText("Savegame file corrupted\n\nPress ESC\n"), NULL, MM_NOTHING);
 		Command_ExitGame_f();
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
+		Z_Free(save.buffer);
+		save.p = save.buffer = NULL;
 		startonmapnum = 0;
 
 		// no cheating!
@@ -3482,8 +3486,8 @@ static void M_ForceLoadGameResponse(INT32 ch)
 	}
 
 	// done
-	Z_Free(savebuffer);
-	save_p = savebuffer = NULL;
+	Z_Free(save.buffer);
+	save.p = save.buffer = NULL;
 	startonmapnum = 0;
 
 	//set cursaveslot to -1 so nothing gets saved.
@@ -3509,6 +3513,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 	size_t length;
 	char vcheck[VERSIONSIZE];
 	char savename[255];
+	savebuffer_t save;
 
 	// memset savedata to all 0, fixes calling perfectly valid saves corrupt because of bots
 	memset(&savedata, 0, sizeof(savedata));
@@ -3520,18 +3525,18 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 
 	sprintf(savename, savegamename, slot);
 
-	length = FIL_ReadFile(savename, &savebuffer);
+	length = FIL_ReadFile(savename, &save.buffer);
 	if (!length)
 	{
 		CONS_Printf(M_GetText("Couldn't read file %s\n"), savename);
 		return;
 	}
 
-	save_p = savebuffer;
+	save.p = save.buffer;
 
 	memset(vcheck, 0, sizeof (vcheck));
 	sprintf(vcheck, "version %d", VERSION);
-	if (strcmp((const char *)save_p, (const char *)vcheck))
+	if (strcmp((const char *)save.p, (const char *)vcheck))
 	{
 #ifdef SAVEGAME_OTHERVERSIONS
 		M_StartMessage(M_GetText("Save game from different version.\nYou can load this savegame, but\nsaving afterwards will be disabled.\n\nDo you want to continue anyway?\n\n(Press 'Y' to confirm)\n"),
@@ -3541,15 +3546,15 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 		M_ClearMenus(true); // so ESC backs out to title
 		M_StartMessage(M_GetText("Save game from different version\n\nPress ESC\n"), NULL, MM_NOTHING);
 		Command_ExitGame_f();
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
+		Z_Free(save.buffer);
+		save.p = save.buffer = NULL;
 
 		// no cheating!
 		memset(&savedata, 0, sizeof(savedata));
 #endif
 		return; // bad version
 	}
-	save_p += VERSIONSIZE;
+	save.p += VERSIONSIZE;
 
 //	if (demoplayback) // reset game engine
 //		G_StopDemo();
@@ -3558,13 +3563,13 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 //	automapactive = false;
 
 	// dearchive all the modifications
-	if (!P_LoadGame(mapoverride))
+	if (!P_LoadGame(&save, mapoverride))
 	{
 		M_ClearMenus(true); // so ESC backs out to title
 		M_StartMessage(M_GetText("Savegame file corrupted\n\nPress ESC\n"), NULL, MM_NOTHING);
 		Command_ExitGame_f();
-		Z_Free(savebuffer);
-		save_p = savebuffer = NULL;
+		Z_Free(save.buffer);
+		save.p = save.buffer = NULL;
 
 		// no cheating!
 		memset(&savedata, 0, sizeof(savedata));
@@ -3572,8 +3577,8 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 	}
 
 	// done
-	Z_Free(savebuffer);
-	save_p = savebuffer = NULL;
+	Z_Free(save.buffer);
+	save.p = save.buffer = NULL;
 
 //	gameaction = ga_nothing;
 //	G_SetGamestate(GS_LEVEL);
@@ -3597,6 +3602,7 @@ void G_SaveGame(UINT32 savegameslot)
 	boolean saved;
 	char savename[256] = "";
 	const char *backup;
+	savebuffer_t save;
 
 	sprintf(savename, savegamename, savegameslot);
 	backup = va("%s",savename);
@@ -3610,8 +3616,8 @@ void G_SaveGame(UINT32 savegameslot)
 		char name[VERSIONSIZE];
 		size_t length;
 
-		save_p = savebuffer = (UINT8 *)malloc(SAVEGAMESIZE);
-		if (!save_p)
+		save.p = save.buffer = (UINT8 *)malloc(SAVEGAMESIZE);
+		if (!save.p)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("No more free memory for saving game data\n"));
 			return;
@@ -3619,14 +3625,14 @@ void G_SaveGame(UINT32 savegameslot)
 
 		memset(name, 0, sizeof (name));
 		sprintf(name, "version %d", VERSION);
-		WRITEMEM(save_p, name, VERSIONSIZE);
+		WRITEMEM(save.p, name, VERSIONSIZE);
 
-		P_SaveGame();
+		P_SaveGame(&save);
 
-		length = save_p - savebuffer;
-		saved = FIL_WriteFile(backup, savebuffer, length);
-		free(savebuffer);
-		save_p = savebuffer = NULL;
+		length = save.p - save.buffer;
+		saved = FIL_WriteFile(backup, save.buffer, length);
+		free(save.buffer);
+		save.p = save.buffer = NULL;
 	}
 
 	gameaction = ga_nothing;

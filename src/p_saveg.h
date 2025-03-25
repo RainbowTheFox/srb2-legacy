@@ -18,13 +18,6 @@
 #pragma interface
 #endif
 
-// Persistent storage/archiving.
-// These are the load / save game routines.
-
-void P_SaveGame(void);
-void P_SaveNetGame(void);
-boolean P_LoadGame(INT16 mapoverride);
-boolean P_LoadNetGame(void);
 
 mobj_t *P_FindNewPosition(UINT32 oldposition);
 
@@ -41,6 +34,17 @@ typedef struct
 } savedata_t;
 
 extern savedata_t savedata;
-extern UINT8 *save_p;
+
+typedef struct
+{
+	UINT8 *buffer;
+	UINT8 *p;
+} savebuffer_t;
+
+
+void P_SaveGame(savebuffer_t *save);
+void P_SaveNetGame(savebuffer_t *save);
+boolean P_LoadGame(savebuffer_t *save, INT16 mapoverride);
+boolean P_LoadNetGame(savebuffer_t *save);
 
 #endif
