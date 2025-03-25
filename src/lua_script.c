@@ -35,8 +35,6 @@
 lua_State *gL = NULL;
 
 
-static UINT8 **lua_save_p = NULL; // FIXME: Remove this horrible hack
-
 // List of internal libraries to load from SRB2
 static lua_CFunction liblist[] = {
 	LUA_EnumLib, // global metatable for enums
@@ -793,9 +791,10 @@ static void ArchiveExtVars(UINT8 **p, void *pointer, const char *ptype)
 static int NetArchive(lua_State *L)
 {
 	int TABLESINDEX = lua_upvalueindex(1);
+	savebuffer_t *save = lua_touserdata(L, lua_upvalueindex(2));
 	int i, n = lua_gettop(L);
 	for (i = 1; i <= n; i++)
-		ArchiveValue(lua_save_p, TABLESINDEX, i);
+		ArchiveValue(&save->p, TABLESINDEX, i);
 	return n;
 }
 
